@@ -96,23 +96,21 @@ case "$mode" in
         # do init business ...
         case $mode2 in
             start)
-                # apply radio states
-                set_radio_device_states start
-
-                # apply power save settings -- but only if not previously run
-                # (by the udev rule) for the same power state
-                if compare_and_save_power_state $pwrmode; then
-                    echo -n "Applying power save settings..."
-                    apply_common_settings $pwrmode
-                    [ "$pwrmode" = "1" ] && poweroff_drivebay 0
-                    [ "$X_TLP_USB_MODE" = "1" ] && set_usb_suspend 0 auto
-                    echo "done."
-                fi
+                # apply power save settings
+                compare_and_save_power_state $pwrmode
+                echo -n "Applying power save settings..."
+                apply_common_settings $pwrmode
+                poweroff_drivebay $pwrmode 0
+                [ "$X_TLP_USB_MODE" = "1" ] && set_usb_suspend 0 auto
+                echo "done."
 
                 # apply battery settings
                 echo -n "Setting battery charge thresholds..."
                 set_charge_thresholds
                 echo "done."
+
+                # apply radio states
+                set_radio_device_states start
                 ;;
 
             restart|force-reload)
@@ -131,14 +129,6 @@ case "$mode" in
                 ;;
 
             stop)
-                set_radio_device_states stop
-
-                if [ "$USB_AUTOSUSPEND_DISABLE_ON_SHUTDOWN" = "1" ]; then
-                    echo -n "Disabling usb autosuspend..."
-                    set_usb_suspend 0 on
-                    echo "done."
-                fi
-
                 # remove usb startup flag
                 [ -f $USB_DONE ] && rm $USB_DONE
 
@@ -149,6 +139,16 @@ case "$mode" in
                 echo -n "Applying power save settings..."
                 apply_common_settings 0
                 echo "done."
+
+                # disable usb autosuspend if configured
+                if [ "$USB_AUTOSUSPEND_DISABLE_ON_SHUTDOWN" = "1" ]; then
+                    echo -n "Disabling usb autosuspend..."
+                    set_usb_suspend 0 on
+                    echo "done."
+                fi
+
+                # apply radio states
+                set_radio_device_states stop
                 ;;
 
             *)
