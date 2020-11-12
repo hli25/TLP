@@ -285,6 +285,87 @@ set_intel_cpu_perf_pct () { # set Intel P-state performance limits
     return 0
 }
 
+idle_check () {
+    local min max
+    local cpu_idle
+    local cpu_idle_thr=80
+    local sleep_time=5
+
+    if ! check_intel_pstate; then
+        echo_debug "pm" "set_intel_cpu_perf_pct_ext($1).no_intel_pstate"
+        return
+    fi
+
+    min=${CPU_MAX_PERF_ON_BAT:-}
+    max=${CPU_MAX_PERF_ON_AC:-}
+
+    if [ ! -f $CPU_MAX_PERF_PCT ]; then
+        echo_debug "pm" "set_intel_cpu_perf_pct_ext($1).max.not_supported"
+        return
+    fi
+
+    if [ -n "$min" ]; then
+        echo_debug "pm" "set_intel_cpu_perf_pct_ext($1).min: $min; rc=$?"
+    else
+        echo_debug "pm" "set_intel_cpu_perf_pct_ext($1).min.not_configured"
+        return
+    fi
+
+    if [ -n "$max" ]; then
+        echo_debug "pm" "set_intel_cpu_perf_pct_ext($1).max: $max; rc=$?"
+    else
+        echo_debug "pm" "set_intel_cpu_perf_pct_ext($1).max.not_configured"
+        return
+    fi
+
+    while [ 1 ]; do
+        idle_time=`xprintidle`
+
+        # there is user input after last loop, then set max_per_pct to default max
+        if [ "$idle_time" -lt 4900 ]; then
+            write_sysf "$max" $CPU_MAX_PERF_PCT
+        fi
+
+        # if there is no user input more than 1 munite, then set max_per_pct to default min
+        if [ "$idle_time" -gt 59000 ]; then
+            cpu_idle=$(top -b -n1 -p0 | grep "Cpu(s)" | awk  -F',' '{ print $4 }' | sed s/id//g)
+            # inactive and cpu loading is low
+            # if [  "$cpu_idle" -gt "$cpu_idle_thr" ]; then
+            if [ `echo "$cpu_idle > $cpu_idle_thr" | bc` -eq 1 ]; then
+                write_sysf "$min" $CPU_MAX_PERF_PCT
+            fi
+        fi
+
+        #echo_debug "max_perf_pct: `cat $CPU_MAX_PERF_PCT`"
+
+        sleep $sleep_time
+    done
+}
+
+set_intel_cpu_perf_pct_ext () { # set Intel P-state performance limits according to user idle time
+                      # $1: 0=ac mode, 1=battery mode
+                      # $2: start, stop, auto, restart
+
+    if [ "$2" = "stop" ] || [ "$2" = "auto" ] || [ "$2" = "restart" ]; then
+        if [ -f $RUNDIR/perf_pct_ext_pid ]; then
+            perf_pct_ext_pid=`cat $RUNDIR/perf_pct_ext_pid`
+            kill -9 "$perf_pct_ext_pid"
+            rm -f $RUNDIR/perf_pct_ext_pid
+        fi
+    fi
+
+    if [ "$1" = "0" ] || [ "$2" = "stop" ]; then
+        return 0
+    fi
+
+    # start, auto, restart
+    idle_check &
+    perf_pct_ext_pid="$!"
+    echo "$perf_pct_ext_pid" > $RUNDIR/perf_pct_ext_pid
+
+    return 0
+}
+
 set_cpu_boost_all () { # $1: 0=ac mode, 1=battery mode
     # global cpu boost behavior control based on the current power mode
     #

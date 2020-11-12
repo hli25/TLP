@@ -272,6 +272,9 @@ case "$_cmd" in
 
                 # apply radio states
                 set_radio_device_states start
+
+                # start tuning max_perf_pct according to user idle time
+                set_intel_cpu_perf_pct_ext $pwrmode start
                 ;;
 
             restart|force-reload)
@@ -287,6 +290,9 @@ case "$_cmd" in
                 echo -n "Setting battery charge thresholds..."
                 set_charge_thresholds
                 echo "done."
+
+                # start tuning max_perf_pct according to user idle time
+                set_intel_cpu_perf_pct_ext $pwrmode restart
                 ;;
 
             stop)
@@ -311,6 +317,9 @@ case "$_cmd" in
 
                 # apply radio states
                 set_radio_device_states stop
+
+                # stop set_intel_cpu_perf_pct_ext()
+                set_intel_cpu_perf_pct_ext $pwrmode stop
                 ;;
 
             *)
@@ -341,6 +350,8 @@ case "$_cmd" in
             fi
             unlock_tlp
         fi
+        # start tuning max_perf_pct according to user idle time
+        set_intel_cpu_perf_pct_ext $pwrmode auto
         ;;
 
     start) # set mode depending on state (interactive mode)
