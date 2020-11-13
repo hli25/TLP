@@ -327,34 +327,39 @@ idle_check () {
             continue
         fi
 
-        # If there is no user input more than 1 munite, then set max_per_pct to default "min"
+        # If there is no user input more than 10 seconds, then set max_per_pct to default "min"
         idle_time=`xprintidle`
 
         # mpv/mplayer will reset idle time, to avoid this case
         # 1. mpv/mplayer's param "--no-stop-screensaver" can disable the feature
         # 2. kylin session-manager will provide system idle time instead of "xprintidle", but not ready yet
         # Currently workaround it by checking mpv/mplayer:
-        # If either of them is running, set max_perf_pct to "min" if system loading is low
+        # If one of them is running, set max_perf_pct to "min" if system loading is low
         mpv_running=$(ps -e | grep mpv)
         mplayer_running=$(ps -e | grep mplayer)
-        if [ "$idle_time" -gt 59000 ] || [ -n "$mpv_running" ] || [ -n "$mplayer_running" ]; then
+        if [ "$idle_time" -gt 9900 ] || [ -n "$mpv_running" ] || [ -n "$mplayer_running" ]; then
             cpu_idle=$(top -b -n1 -p0 | grep "Cpu(s)" | awk  -F',' '{ print $4 }' | sed s/id//g)
             # inactive and cpu loading is low
             # if [  "$cpu_idle" -gt "$cpu_idle_thr" ]; then
             if [ `echo "$cpu_idle > $cpu_idle_thr" | bc` -eq 1 ]; then
-                write_sysf "$min" $CPU_MAX_PERF_PCT
-                echo_debug "idle time: $idle_time, max_perf_pct: `cat $CPU_MAX_PERF_PCT`, cpu id: $cpu_idle"
-                sleep $sleep_time
-                continue
+                if [ "$(read_sysf $CPU_MAX_PERF_PCT)" != "$min" ]; then
+                    write_sysf "$min" $CPU_MAX_PERF_PCT
+                fi
+            else
+                write_sysf "$max" $CPU_MAX_PERF_PCT
             fi
+
+            #echo_debug "idle time: $idle_time, max_perf_pct: $(read_sysf $CPU_MAX_PERF_PCT), cpu id: $cpu_idle"
+            sleep $sleep_time
+            continue
         fi
 
-        # there is user input after last loop, then set max_per_pct to default max
+        # there is user input then set max_per_pct to default max
         if [ "$idle_time" -lt 4900 ]; then
             write_sysf "$max" $CPU_MAX_PERF_PCT
         fi
 
-        echo_debug "idle time: $idle_time, max_perf_pct: `cat $CPU_MAX_PERF_PCT`, cpu id: $cpu_idle"
+        #echo_debug "idle time: $idle_time, max_perf_pct: $(read_sysf $CPU_MAX_PERF_PCT), cpu id: $cpu_idle"
         sleep $sleep_time
     done
 }
@@ -365,7 +370,7 @@ set_intel_cpu_perf_pct_ext () { # set Intel P-state performance limits according
 
     if [ "$2" = "stop" ] || [ "$2" = "start" ] || [ "$2" = "restart" ]; then
         if [ -f $RUNDIR/perf_pct_ext_pid ]; then
-            perf_pct_ext_pid=`cat $RUNDIR/perf_pct_ext_pid`
+            perf_pct_ext_pid=$(read_sysf $RUNDIR/perf_pct_ext_pid)
             kill -9 "$perf_pct_ext_pid"
             rm -f $RUNDIR/perf_pct_ext_pid
         fi
@@ -379,7 +384,7 @@ set_intel_cpu_perf_pct_ext () { # set Intel P-state performance limits according
     # start, auto, restart
     idle_check &
     perf_pct_ext_pid="$!"
-    echo "$perf_pct_ext_pid" > $RUNDIR/perf_pct_ext_pid
+    write_sysf "$perf_pct_ext_pid" $RUNDIR/perf_pct_ext_pid
 
     return 0
 }
