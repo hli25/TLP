@@ -319,25 +319,34 @@ idle_check () {
     fi
 
     while [ 1 ]; do
+        # If there is no user input more than 1 munite, then set max_per_pct to default "min"
         idle_time=`xprintidle`
+
+        # mpv/mplayer will reset idle time, to avoid this case
+        # 1. mpv/mplayer's param "--no-stop-screensaver" can disable the feature
+        # 2. kylin session-manager will provide system idle time instead of "xprintidle", but not ready yet
+        # Currently workaround it by checking mpv/mplayer:
+        # If either of them is running, set max_perf_pct to "min" if system loading is low
+        mpv_running=$(ps -e | grep mpv)
+        mplayer_running=$(ps -e | grep mplayer)
+        if [ "$idle_time" -gt 59000 ] || [ -n "$mpv_running" ] || [ -n "$mplayer_running" ]; then
+            cpu_idle=$(top -b -n1 -p0 | grep "Cpu(s)" | awk  -F',' '{ print $4 }' | sed s/id//g)
+            # inactive and cpu loading is low
+            # if [  "$cpu_idle" -gt "$cpu_idle_thr" ]; then
+            if [ `echo "$cpu_idle > $cpu_idle_thr" | bc` -eq 1 ]; then
+                write_sysf "$min" $CPU_MAX_PERF_PCT
+                echo_debug "idle time: $idle_time, max_perf_pct: `cat $CPU_MAX_PERF_PCT`, cpu id: $cpu_idle"
+                sleep $sleep_time
+                continue
+            fi
+        fi
 
         # there is user input after last loop, then set max_per_pct to default max
         if [ "$idle_time" -lt 4900 ]; then
             write_sysf "$max" $CPU_MAX_PERF_PCT
         fi
 
-        # if there is no user input more than 1 munite, then set max_per_pct to default min
-        if [ "$idle_time" -gt 59000 ]; then
-            cpu_idle=$(top -b -n1 -p0 | grep "Cpu(s)" | awk  -F',' '{ print $4 }' | sed s/id//g)
-            # inactive and cpu loading is low
-            # if [  "$cpu_idle" -gt "$cpu_idle_thr" ]; then
-            if [ `echo "$cpu_idle > $cpu_idle_thr" | bc` -eq 1 ]; then
-                write_sysf "$min" $CPU_MAX_PERF_PCT
-            fi
-        fi
-
-        #echo_debug "max_perf_pct: `cat $CPU_MAX_PERF_PCT`"
-
+        echo_debug "idle time: $idle_time, max_perf_pct: `cat $CPU_MAX_PERF_PCT`, cpu id: $cpu_idle"
         sleep $sleep_time
     done
 }
