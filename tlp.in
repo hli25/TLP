@@ -296,6 +296,9 @@ case "$_cmd" in
                 ;;
 
             stop)
+                # stop tuning max_perf_pct
+                set_intel_cpu_perf_pct_ext $pwrmode stop
+
                 # remove usb startup flag
                 [ -f $USB_DONE ] && rm $USB_DONE
 
@@ -317,9 +320,6 @@ case "$_cmd" in
 
                 # apply radio states
                 set_radio_device_states stop
-
-                # stop set_intel_cpu_perf_pct_ext()
-                set_intel_cpu_perf_pct_ext $pwrmode stop
                 ;;
 
             *)
@@ -350,8 +350,6 @@ case "$_cmd" in
             fi
             unlock_tlp
         fi
-        # start tuning max_perf_pct according to user idle time
-        set_intel_cpu_perf_pct_ext $pwrmode auto
         ;;
 
     start) # set mode depending on state (interactive mode)

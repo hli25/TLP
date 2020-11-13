@@ -286,6 +286,7 @@ set_intel_cpu_perf_pct () { # set Intel P-state performance limits
 }
 
 idle_check () {
+    local lp
     local min max
     local cpu_idle
     local cpu_idle_thr=80
@@ -319,6 +320,13 @@ idle_check () {
     fi
 
     while [ 1 ]; do
+        # read saved state, 0=ac mode, 1=battery mode
+        lp=$(read_sysf $PWRRUNFILE)
+        if [ "$lp" = 0 ]; then
+            sleep $sleep_time
+            continue
+        fi
+
         # If there is no user input more than 1 munite, then set max_per_pct to default "min"
         idle_time=`xprintidle`
 
@@ -355,7 +363,7 @@ set_intel_cpu_perf_pct_ext () { # set Intel P-state performance limits according
                       # $1: 0=ac mode, 1=battery mode
                       # $2: start, stop, auto, restart
 
-    if [ "$2" = "stop" ] || [ "$2" = "auto" ] || [ "$2" = "restart" ]; then
+    if [ "$2" = "stop" ] || [ "$2" = "start" ] || [ "$2" = "restart" ]; then
         if [ -f $RUNDIR/perf_pct_ext_pid ]; then
             perf_pct_ext_pid=`cat $RUNDIR/perf_pct_ext_pid`
             kill -9 "$perf_pct_ext_pid"
@@ -363,7 +371,8 @@ set_intel_cpu_perf_pct_ext () { # set Intel P-state performance limits according
         fi
     fi
 
-    if [ "$1" = "0" ] || [ "$2" = "stop" ]; then
+    # if [ "$1" = "0" ] || [ "$2" = "stop" ]; then
+    if [ "$2" = "stop" ]; then
         return 0
     fi
 
