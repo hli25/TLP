@@ -274,7 +274,11 @@ case "$_cmd" in
                 set_radio_device_states start
 
                 # start tuning max_perf_pct according to user idle time
-                set_intel_cpu_perf_pct_ext $pwrmode start
+                if cmd_exists "xprintidle"; then
+                    set_intel_cpu_perf_pct_ext $pwrmode start
+                else
+                    echo "xprintidle is not installed"
+                fi
                 ;;
 
             restart|force-reload)
@@ -292,12 +296,18 @@ case "$_cmd" in
                 echo "done."
 
                 # start tuning max_perf_pct according to user idle time
-                set_intel_cpu_perf_pct_ext $pwrmode restart
+                if cmd_exists "xprintidle"; then
+                    set_intel_cpu_perf_pct_ext $pwrmode restart
+                else
+                    echo "xprintidle is not installed"
+                fi
                 ;;
 
             stop)
                 # stop tuning max_perf_pct
-                set_intel_cpu_perf_pct_ext $pwrmode stop
+                if cmd_exists "xprintidle"; then
+                    set_intel_cpu_perf_pct_ext $pwrmode stop
+                fi
 
                 # remove usb startup flag
                 [ -f $USB_DONE ] && rm $USB_DONE
