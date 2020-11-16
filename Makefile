@@ -132,6 +132,8 @@ install-tlp: all
 	install -m 755 tlp-pcilist $(_TLIB)/
 	install -m 755 tlp-readconfs $(_TLIB)/
 	install -m 755 tlp-usblist $(_TLIB)/
+	# Package xprintidle
+	install -m 755 xprintidle $(_BIN)/
 ifneq ($(TLP_NO_TPACPI),1)
 	install -D -m 755 tpacpi-bat $(_TPACPIBAT)
 endif
@@ -212,6 +214,8 @@ uninstall-tlp:
 	rm -f $(_SHCPL)/wwan
 	rm -f $(_SHCPL)/tlp
 	rm -f $(_META)/de.linrunner.tlp.metainfo.xml
+	# Package xprintidle
+	rm -f $(_BIN)/xprintidle
 	rm -r $(_VAR)
 
 uninstall-rdw:
