@@ -2,7 +2,10 @@ tlp (1.6.0~alpha.0) UNRELEASED; urgency=medium
 
   * Start 1.6 development cycle
 
- -- Thomas Koch <linrunner@gmx.net>  Wed, 25 May 2022 19:04:50 +0200
+  [ Thomas Koch ]
+  * Add ZSH completion
+
+ -- Thomas Koch <linrunner@gmx.net>  Sat, 28 May 2022 17:43:16 +0200
 
 tlp (1.5.0-1) unstable; urgency=medium
 
