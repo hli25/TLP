@@ -256,6 +256,37 @@ set_disk_iosched () { # set disk io scheduler
     return 0
 }
 
+set_disk_readahead () { # set disk readahead size
+    local dev
+
+    # quit when disabled
+    if [ -z "$DISK_DEVICES" ]; then
+        return 0
+    fi
+
+    # set @argv := read ahead size
+    set -- $DISK_READAHEAD
+
+    # quit if empty
+    if [ $# -eq 0 ]; then
+        return 0
+    fi
+
+    for dev in $DISK_DEVICES; do
+        local ra ractrl
+        if get_disk_dev $dev; then
+            ra=${1:-4096}
+            ractrl="/sys/block/$_disk_dev/queue/read_ahead_kb"
+
+            if [ -f $ractrl ]; then
+                write_sysf "$ra" $ractrl
+            fi
+        fi
+    done
+
+    return 0
+}
+
 # --- Power Saving
 
 set_sata_link_power () { # set ahci link power management
